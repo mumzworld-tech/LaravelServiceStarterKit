@@ -16,6 +16,95 @@ services:
     networks:
       - app-network
 
+  mysql:
+    build:
+      context: ./docker/mysql
+      dockerfile: Dockerfile
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword # Change this in production!
+      MYSQL_DATABASE: app_db # Change as needed
+      MYSQL_USER: app_user # Change as needed
+      MYSQL_PASSWORD: userpassword # Change this in production!
+    volumes:
+      - ./docker/data/mysql:/var/lib/mysql
+    networks:
+      - app-network
+
+  redis:
+    build:
+      context: ./docker/redis
+      dockerfile: Dockerfile
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./docker/data/redis:/data
+    networks:
+      - app-network
+
+  dynamodb:
+    build:
+      context: ./docker/dynamodb
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./docker/data/dynamodb:/data/dynamodb
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /data/dynamodb"
+    networks:
+      - app-network
+
+  horizon:
+    build:
+      context: ./docker/horizon
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/var/www/html
+    environment:
+      FRANKENPHP_CONFIG: "/var/www/html/docker/horizon/frankenphp.ini"
+      # Add other environment variables your Horizon worker needs, e.g., DB_CONNECTION, REDIS_HOST
+    depends_on:
+      - app # Ensure app is built/available if horizon needs compiled assets from it or shares code
+      - redis
+      - mysql # Or other databases Horizon might interact with
+    command: "php artisan horizon"
+    networks:
+      - app-network
+
+  phpmyadmin:
+    build:
+      context: ./docker/phpmyadmin
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql # Links to the mysql service
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: rootpassword # Same as mysql service root password
+      # You might want to add UPLOAD_LIMIT or other phpMyAdmin specific vars
+    depends_on:
+      - mysql
+    networks:
+      - app-network
+
+  redis-commander:
+    build:
+      context: ./docker/redis-commander
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      REDIS_HOSTS: "local:redis:6379"
+      # Add other Redis Commander specific environment variables if needed
+    depends_on:
+      - redis
+    networks:
+      - app-network
+
 networks:
   app-network:
-    driver: bridge 
+    driver: bridge
+
+# Service definitions continue above, network definition is complete.
+# Any further global configurations like secrets or configs would go here if needed. 
