@@ -26,7 +26,8 @@ RUN install-php-extensions \
 
 # Install redis extension via PECL
 RUN pecl install redis && docker-php-ext-enable redis
-
+# Install OpenTelemetry extension via PECL
+RUN pecl install opentelemetry-1.0.0beta7 && docker-php-ext-enable opentelemetry
 # Install Composer globally
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 RUN chmod +x /usr/bin/composer

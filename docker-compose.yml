@@ -11,6 +11,7 @@ services:
       - "${DOCKER_APP_HTTPS_PORT:-443}:443"
     volumes:
       - ./:/var/www/html
+      - ./docker/application/opentelemetry.ini:/usr/local/etc/php/conf.d/opentelemetry.ini
     environment:
       FRANKENPHP_CONFIG: "/var/www/html/docker/application/frankenphp.ini"
       # Laravel will read these from the .env file loaded into the container
@@ -19,6 +20,7 @@ services:
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
       DYNAMODB_ENDPOINT: ${DYNAMODB_ENDPOINT:-}
       # Other app-specific vars from .env are also available due to `env_file: .env`
+      OTEL_LOG_LEVEL: debug
     networks:
       - app-network
 
@@ -131,6 +133,17 @@ services:
       AWS_SECRET_ACCESS_KEY: secret # For DynamoDB Local
     depends_on:
       - dynamodb
+    networks:
+      - app-network
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"  # UI port
+      - "4318:4318"    # OTLP HTTP receiver
+      - "4317:4317"    # OTLP gRPC receiver
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
     networks:
       - app-network
 

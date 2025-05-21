@@ -24,3 +24,23 @@ Route::prefix('debug')->group(function () {
     Route::get('/custom-exception', [DebugController::class, 'customException'])->name('debug.custom-exception');
     Route::get('/random-error', [DebugController::class, 'randomError'])->name('debug.random-error');
 });
+
+Route::get('/simple-trace', function () {
+    $tracer = OpenTelemetry\API\Trace\TracerProvider::getDefaultTracer();
+
+    $span = $tracer->spanBuilder('simple-operation')
+        ->setAttribute('test.attribute', 'test-value')
+        ->startSpan();
+
+    try {
+        // Simulate some work
+        sleep(1);
+
+        return response()->json([
+            'message' => 'Simple trace created successfully',
+            'trace_id' => $span->getContext()->getTraceId()
+        ]);
+    } finally {
+        $span->end();
+    }
+});

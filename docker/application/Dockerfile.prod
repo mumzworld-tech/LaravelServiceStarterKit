@@ -25,6 +25,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Add any other system dependencies your app might need
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Install OpenTelemetry extension via PECL
+RUN pecl install opentelemetry && docker-php-ext-enable opentelemetry
+
 # Install PHP extensions commonly used by Laravel
 # The base dunglas/frankenphp image has many, but you might need more specific ones.
 # Use 'docker-php-extension-installer' or 'install-php-extensions' (provided by base image)

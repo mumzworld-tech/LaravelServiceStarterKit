@@ -1,5 +1,10 @@
 <?php
 
+use Illuminate\Support\ServiceProvider;
+use App\Providers\AppServiceProvider;
+use App\Providers\HorizonServiceProvider;
+use App\Providers\TelemetryServiceProvider;
+
 return [
 
     /*
@@ -122,5 +127,18 @@ return [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
+
+    'providers' => ServiceProvider::defaultProviders()->merge([
+        /*
+         * Package Service Providers...
+         */
+
+        /*
+         * Application Service Providers...
+         */
+        AppServiceProvider::class,
+        HorizonServiceProvider::class,
+        TelemetryServiceProvider::class,
+    ])->toArray(),
 
 ];
