@@ -1,0 +1,128 @@
+<?php
+
+namespace {{ namespace }};
+
+use BaoPham\DynamoDb\DynamoDbModel;
+use Illuminate\Support\Str;
+
+class {{ class }} extends DynamoDbModel
+{
+    /**
+     * The DynamoDB table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = '{{table}}';
+
+    /**
+     * The primary key for the model (DynamoDB Hash Key).
+     *
+     * @var string
+     */
+    protected $primaryKey = '{{primaryKey}}';
+
+    /**
+     * The "type" of the primary key ID.
+     * For DynamoDB, this is typically 'string' (S), 'number' (N), or 'binary' (B).
+     *
+     * @var string
+     */
+    protected $keyType = 'string'; // Or 'number', 'binary'
+
+    /**
+     * Indicates if the model's ID is auto-incrementing.
+     * DynamoDB does not support auto-incrementing keys.
+     *
+     * @var bool
+     */
+    public $incrementing = false;
+
+    /**
+     * Indicates if the model should be timestamped (created_at/updated_at).
+     * Set to true if you want DynamoDB to automatically handle these as attributes.
+     * Alternatively, manage them manually or via accessors/mutators if specific formats are needed.
+     * Your example model sets this to false and handles created_at in constructor.
+     *
+     * @var bool
+     */
+    public $timestamps = false; // Or true, if you want automatic handling by the package
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $fillable = [
+        '{{primaryKey}}',
+        // Add other fillable attributes here
+    ];
+
+    /**
+     * The attributes that should be cast to native types or custom classes.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        // 'attribute_name' => 'integer',
+        // 'another_attribute' => 'boolean',
+        // 'media_items' => 'array', // For JSON string to array casting
+        // 'custom_date' => 'datetime', // For ISO8601 string to Carbon instance
+    ];
+
+    /**
+     * Defines the Global Secondary Indexes (GSIs) for the DynamoDB table.
+     * Example:
+     * 'index-name' => [
+     *     'hash' => 'gsi_hash_key_attribute',
+     *     // 'range' => 'gsi_range_key_attribute', // Optional range key
+     * ],
+     *
+     * @var array<string, array<string, string>>
+     */
+    protected $dynamoDbIndexKeys = {{dynamoDbIndexKeys}};
+
+    /**
+     * Create a new model instance.
+     *
+     * You might want to set default values here, especially for the primary key if it's a UUID.
+     * Example from your RatingAndReview model:
+     * $this->attributes[$this->getKeyName()] = $this->attributes[$this->getKeyName()] ?? (string) Str::uuid();
+     * $this->attributes['created_at'] = $this->attributes['created_at'] ?? now()->toIso8601String();
+     *
+     * @param array<string, mixed> $attributes
+     */
+    public function __construct(array $attributes = [])
+    {
+        parent::__construct($attributes);
+
+        // Set default for primary key if it's not auto-incrementing and not provided
+        if (!$this->incrementing && !isset($attributes[$this->getKeyName()])) {
+            // If your primary key is typically a UUID:
+            // $this->setAttribute($this->getKeyName(), (string) Str::uuid());
+        }
+
+        // If managing timestamps manually (when $timestamps = false):
+        // if (!isset($attributes['created_at'])) {
+        //     $this->setAttribute('created_at', now()->toIso8601String());
+        // }
+    }
+
+    // Add your accessors, mutators, scopes, and relationships here
+    // Example Accessor:
+    // public function getSomeAttributeAttribute($value)
+    // {
+    //    return strtoupper($value);
+    // }
+
+    // Example Mutator:
+    // public function setSomeAttributeAttribute($value)
+    // {
+    //    $this->attributes['some_attribute'] = strtolower($value);
+    // }
+
+    // Example Scope:
+    // public function scopeActive($query)
+    // {
+    //    return $query->where('status', 'active');
+    // }
+} 

@@ -39,8 +39,12 @@ RUN install-php-extensions \
     zip
     # Add any other PHP extensions your app needs
 
+# Install redis extension via PECL
+RUN pecl install redis && docker-php-ext-enable redis
+
 # Install Composer globally
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+RUN chmod +x /usr/bin/composer
 
 # Copy Composer files from project root
 COPY composer.json composer.lock ./

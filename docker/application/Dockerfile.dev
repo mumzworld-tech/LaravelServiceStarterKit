@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libjpeg-dev \
     libwebp-dev \
     libpq-dev \
+    libfreetype6-dev \
     # For gd: libfreetype6-dev is often a dependency but might be covered by libpng/jpeg
     # For exif: no specific system libs typically needed beyond what PHP provides
     # For pcntl/sockets: usually built-in or requires no extra system libs
@@ -30,8 +31,10 @@ RUN docker-php-ext-configure gd --with-jpeg --with-webp --with-freetype \
     sockets \
     intl \
     zip \
-    opcache \
-    redis
+    opcache
+
+# Install redis extension via PECL
+RUN pecl install redis && docker-php-ext-enable redis
 
 # Install Xdebug (for development)
 RUN pecl install xdebug && docker-php-ext-enable xdebug
@@ -45,6 +48,10 @@ COPY docker/application/xdebug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdeb
 # Copy custom FrankenPHP configuration to enable opcache for dev
 COPY docker/application/frankenphp.ini /usr/local/etc/php/conf.d/zz-frankenphp-custom.ini
 COPY docker/application/opcache-dev.ini /usr/local/etc/php/conf.d/opcache-dev.ini
+
+# Install Composer globally
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+RUN chmod +x /usr/bin/composer
 
 # Copy composer files
 COPY composer.json composer.lock ./
