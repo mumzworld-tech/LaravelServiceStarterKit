@@ -10,7 +10,10 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "baopham/dynamodb": "^6.6",
         "laravel/framework": "^12.0",
+        "laravel/horizon": "^5.32",
+        "laravel/octane": "^2.9",
         "laravel/tinker": "^2.10.1"
     },
     "require-dev": {

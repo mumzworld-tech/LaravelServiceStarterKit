@@ -1,35 +1,27 @@
 # Dockerfile for Development (inherits from FrankenPHP base)
-FROM dunglas/frankenphp
+FROM dunglas/frankenphp:1-php8.3-bookworm AS frankenphp_base
 
-WORKDIR /var/www/html
-
-# Environment: development (Laravel specific, set in .env or docker-compose environment section)
-# ENV APP_ENV=local
-# ENV APP_DEBUG=true
-
-# Copy development PHP INI files (opcache, xdebug)
-COPY docker/application/opcache-dev.ini /usr/local/etc/php/conf.d/opcache-dev.ini
-COPY docker/application/xdebug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
-
-# Install system dependencies (git, zip, common libs for extensions)
+# Install system dependencies for common PHP extensions
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git \
+    libzip-dev \
     zip \
     unzip \
-    libzip-dev \
     libpng-dev \
     libjpeg-dev \
-    libfreetype6-dev \
-    libonig-dev \
-    libxml2-dev \
+    libwebp-dev \
+    libpq-dev \
+    # For gd: libfreetype6-dev is often a dependency but might be covered by libpng/jpeg
+    # For exif: no specific system libs typically needed beyond what PHP provides
+    # For pcntl/sockets: usually built-in or requires no extra system libs
+    # For intl: libicu-dev
     libicu-dev \
-    # Add any other system dependencies your app might need for dev
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions (common Laravel ones + Xdebug for dev)
-# Note: Xdebug can impact performance, enable it conditionally or use a separate build stage if preferred.
-RUN install-php-extensions \
+# Install PHP extensions
+# hadolint ignore=DL3018
+RUN docker-php-ext-configure gd --with-jpeg --with-webp --with-freetype \
+    && docker-php-ext-install -j$(nproc) \
     pdo_mysql \
     bcmath \
     gd \
@@ -38,27 +30,46 @@ RUN install-php-extensions \
     sockets \
     intl \
     zip \
-    xdebug # For development
-    # Add any other PHP extensions your app needs for dev
+    opcache \
+    redis
 
-# Install Composer globally
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Install Xdebug (for development)
+RUN pecl install xdebug && docker-php-ext-enable xdebug
 
-# Copy Composer files
+# Set working directory
+WORKDIR /var/www/html
+
+# Copy Xdebug configuration
+COPY docker/application/xdebug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+
+# Copy custom FrankenPHP configuration to enable opcache for dev
+COPY docker/application/frankenphp.ini /usr/local/etc/php/conf.d/zz-frankenphp-custom.ini
+COPY docker/application/opcache-dev.ini /usr/local/etc/php/conf.d/opcache-dev.ini
+
+# Copy composer files
 COPY composer.json composer.lock ./
 
-# Install Composer dependencies (including dev requirements)
-RUN composer install --no-interaction --no-plugins --no-scripts --prefer-dist \
-    && composer clear-cache
+# Install composer dependencies (including dev dependencies)
+RUN composer install --prefer-dist --no-scripts --no-progress --no-autoloader
 
-# Copy the rest of the application code
-# For development, this is often less critical as the primary source of truth is the mounted volume.
-# However, it ensures the image is runnable standalone for checks and can pre-warm caches if artisan commands are run.
+# Copy application code
 COPY . .
 
-# Set permissions for Laravel storage and bootstrap/cache folders
-RUN chown -R www-data:www-data storage bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache
+# Optimize autoloader and run post-install scripts
+RUN composer dump-autoload --optimize && \
+    composer run-script post-autoload-dump --no-dev
 
-# The base image CMD will start Caddy/FrankenPHP.
-# Development relies on volume mounts for live code changes. 
+# Set permissions
+RUN chown -R www-data:www-data storage bootstrap/cache && \
+    chmod -R 775 storage bootstrap/cache
+
+# Copy app start script
+COPY docker/application/start_app_dev.sh /usr/local/bin/start_app_dev.sh
+RUN chmod +x /usr/local/bin/start_app_dev.sh
+
+# Expose port 80 for the web server (FrankenPHP default)
+# Port 443 is also exposed by the base image if Caddy is used with HTTPS
+EXPOSE 80
+
+# Set the command
+CMD ["/usr/local/bin/start_app_dev.sh"]

@@ -21,27 +21,34 @@ RUN install-php-extensions \
     pcntl \
     sockets \
     intl \
-    zip
+    zip \
+    redis
     # Add any other PHP extensions Horizon needs
 
 # Install Composer globally
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copy Composer files
+# Copy Composer files from project root
 COPY composer.json composer.lock ./
 
 # Install Composer dependencies (production: --no-dev)
 RUN composer install --no-interaction --no-plugins --no-scripts --prefer-dist --no-dev \
     && composer clear-cache
 
-# Copy the rest of the application code (Horizon is part of this)
+# Copy the rest of the application code (Horizon is part of this) from project root
 COPY . .
 
 # Set permissions (if Horizon needs to write to specific dirs beyond what Laravel app does)
 # Usually, Horizon runs as the same user and leverages Laravel's storage.
-# RUN chown -R www-data:www-data storage bootstrap/cache ...
+RUN chown -R www-data:www-data storage bootstrap/cache && \
+    chmod -R 775 storage bootstrap/cache
 
-# The command to run Horizon ("php artisan horizon") is specified in docker-compose.yml.
+# Copy horizon start script
+COPY docker/horizon/start_horizon_prod.sh /usr/local/bin/start_horizon_prod.sh
+RUN chmod +x /usr/local/bin/start_horizon_prod.sh
+
+# Set the command
+CMD ["/usr/local/bin/start_horizon_prod.sh"]
 
 # Application code (including Horizon) is typically mounted via volumes.
 # If building a production image or specific assets, uncomment and adjust:

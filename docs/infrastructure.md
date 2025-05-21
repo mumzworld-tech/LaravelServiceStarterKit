@@ -12,6 +12,7 @@ The following services will be used:
 - Horizon
 - Redis Commander
 - phpMyAdmin
+- DynamoDB Admin
 
 Separate Dockerfiles and nodes will be maintained for:
 
@@ -56,6 +57,7 @@ Key Docker-specific variables in `.env` (prefixed with `DOCKER_`) include:
 *   `DOCKER_DYNAMODB_HOST_PORT`: External port for DynamoDB (default: 8000).
 *   `DOCKER_PHPMYADMIN_HOST_PORT`: External port for phpMyAdmin (default: 8080).
 *   `DOCKER_REDIS_COMMANDER_HOST_PORT`: External port for Redis Commander (default: 8081).
+*   `DOCKER_DYNAMODB_ADMIN_HOST_PORT`: External port for DynamoDB Admin (e.g., 8001).
 
 **Important for Laravel Configuration:**
 When running the application within this Docker setup, ensure your Laravel `.env` variables (which are also typically in the same `.env` file) point to the Docker service names for hosts and use appropriate credentials:

@@ -4,6 +4,11 @@ FROM dunglas/frankenphp
 # Set working directory
 WORKDIR /var/www/html
 
+# Copy production PHP INI (if any custom frankenphp settings for prod)
+# If frankenphp.ini has prod-specific settings, copy it.
+# Otherwise, if it only has dev examples, this might not be needed for prod.
+COPY docker/application/frankenphp.ini /usr/local/etc/php/conf.d/zz-frankenphp-custom.ini
+
 # Install system dependencies required by some PHP extensions or tools
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -37,7 +42,7 @@ RUN install-php-extensions \
 # Install Composer globally
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copy Composer files
+# Copy Composer files from project root
 COPY composer.json composer.lock ./
 
 # Install Composer dependencies
@@ -49,7 +54,7 @@ COPY composer.json composer.lock ./
 RUN composer install --no-interaction --no-plugins --no-scripts --prefer-dist --no-dev \
     && composer clear-cache
 
-# Copy the rest of the application code
+# Copy the rest of the application code from project root
 COPY . .
 
 # Set permissions for Laravel storage and bootstrap/cache folders
@@ -58,6 +63,10 @@ COPY . .
 # Adjust user/group if necessary based on how FrankenPHP runs in the base image.
 RUN chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
+
+# Copy app start script
+COPY docker/application/start_app_prod.sh /usr/local/bin/start_app_prod.sh
+RUN chmod +x /usr/local/bin/start_app_prod.sh
 
 # Expose port 80 and 443 (handled by FrankenPHP base image and Caddy)
 # No need to explicitly EXPOSE here as the base image does it.
@@ -72,4 +81,5 @@ RUN chown -R www-data:www-data storage bootstrap/cache \
 # ENTRYPOINT ["docker/application/docker-entrypoint.sh"]
 
 # The default CMD from dunglas/frankenphp should work if your Caddyfile is set up correctly
-# or if Laravel is auto-detected. You typically don't need to override it unless for specific needs. 
+# or if Laravel is auto-detected. You typically don't need to override it unless for specific needs.
+CMD ["/usr/local/bin/start_app_prod.sh"] 

@@ -1,0 +1,96 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Database\Migrations\Migration;
+use BaoPham\DynamoDb\DynamoDbClientService;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        $client = app(DynamoDbClientService::class)->getClient();
+        $tableName = '{{tableName}}';
+
+        $client->createTable([
+            'TableName' => $tableName,
+            'AttributeDefinitions' => [
+                [
+                    'AttributeName' => 'id', // Default primary key, change as needed
+                    'AttributeType' => 'S' // S for String, N for Number, B for Binary
+                ],
+                // Add other attribute definitions (e.g., for GSIs)
+                // [
+                //     'AttributeName' => 'your_gsi_hash_key',
+                //     'AttributeType' => 'S'
+                // ],
+                // [
+                //     'AttributeName' => 'your_gsi_range_key',
+                //     'AttributeType' => 'N'
+                // ]
+            ],
+            'KeySchema' => [
+                [
+                    'AttributeName' => 'id', // Must match one of the AttributeDefinitions
+                    'KeyType' => 'HASH' // HASH for partition key, RANGE for sort key
+                ]
+            ],
+            /* // Example Global Secondary Index (GSI)
+            'GlobalSecondaryIndexes' => [
+                [
+                    'IndexName' => 'your_gsi_name-index',
+                    'KeySchema' => [
+                        [
+                            'AttributeName' => 'your_gsi_hash_key',
+                            'KeyType' => 'HASH'
+                        ],
+                        // Uncomment if your GSI has a sort key
+                        // [
+                        //     'AttributeName' => 'your_gsi_range_key',
+                        //     'KeyType' => 'RANGE'
+                        // ]
+                    ],
+                    'Projection' => [
+                        'ProjectionType' => 'ALL' // Or KEYS_ONLY, INCLUDE
+                    ],
+                    // 'ProvisionedThroughput' is required if BillingMode is PROVISIONED
+                    // For PAY_PER_REQUEST, it's not needed for the index.
+                ]
+            ],
+            */
+            'BillingMode' => 'PAY_PER_REQUEST' // Or PROVISIONED
+            /* // If BillingMode is PROVISIONED, specify throughput:
+            'ProvisionedThroughput' => [
+                'ReadCapacityUnits' => 1,
+                'WriteCapacityUnits' => 1
+            ]
+            */
+        ]);
+
+        // Wait until the table is created
+        $client->waitUntil('TableExists', [
+            'TableName' => $tableName
+        ]);
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        $client = app(DynamoDbClientService::class)->getClient();
+        $tableName = '{{tableName}}';
+
+        $client->deleteTable([
+            'TableName' => $tableName
+        ]);
+
+        // Wait until the table is deleted
+        $client->waitUntil('TableNotExists', [
+            'TableName' => $tableName
+        ]);
+    }
+}; 

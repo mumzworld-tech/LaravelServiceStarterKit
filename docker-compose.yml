@@ -1,12 +1,9 @@
-version: '3.8'
-
-env_file: .env
-
 services:
   app:
+    env_file: .env
     build:
-      context: ./docker/application
-      dockerfile: ${DOCKER_APP_DOCKERFILE:-Dockerfile.prod}
+      context: .
+      dockerfile: ./docker/application/${DOCKER_APP_DOCKERFILE:-Dockerfile.prod}
       args:
         APP_ENV: ${APP_ENV:-production}
     ports:
@@ -15,7 +12,7 @@ services:
     volumes:
       - ./:/var/www/html
     environment:
-      FRANKENPHP_CONFIG: "/var/www/html/docker/application/frankenphp.ini"
+      # FRANKENPHP_CONFIG: "/var/www/html/docker/application/frankenphp.ini" # Commented out
       # Laravel will read these from the .env file loaded into the container
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
@@ -26,6 +23,7 @@ services:
       - app-network
 
   mysql:
+    env_file: .env
     build:
       context: ./docker/mysql
       dockerfile: Dockerfile
@@ -42,6 +40,7 @@ services:
       - app-network
 
   redis:
+    env_file: .env
     build:
       context: ./docker/redis
       dockerfile: Dockerfile
@@ -53,6 +52,7 @@ services:
       - app-network
 
   dynamodb:
+    env_file: .env
     build:
       context: ./docker/dynamodb
       dockerfile: Dockerfile
@@ -65,16 +65,16 @@ services:
       - app-network
 
   horizon:
+    env_file: .env
     build:
-      context: ./docker/horizon
-      dockerfile: ${DOCKER_HORIZON_DOCKERFILE:-Dockerfile.prod}
+      context: .
+      dockerfile: ./docker/horizon/${DOCKER_HORIZON_DOCKERFILE:-Dockerfile.prod}
       args:
         APP_ENV: ${APP_ENV:-production}
     volumes:
       - ./:/var/www/html
     environment:
-      FRANKENPHP_CONFIG: "/var/www/html/docker/horizon/frankenphp.ini"
-      # Horizon also needs AWS/DynamoDB creds if it interacts with them
+      # FRANKENPHP_CONFIG: "/var/www/html/docker/horizon/frankenphp.ini" # Commented out for Horizon as well
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
@@ -84,11 +84,11 @@ services:
       - app
       - redis
       - mysql
-    command: "php artisan horizon"
     networks:
       - app-network
 
   phpmyadmin:
+    env_file: .env
     build:
       context: ./docker/phpmyadmin
       dockerfile: Dockerfile
@@ -104,6 +104,7 @@ services:
       - app-network
 
   redis-commander:
+    env_file: .env
     build:
       context: ./docker/redis-commander
       dockerfile: Dockerfile
@@ -113,6 +114,23 @@ services:
       REDIS_HOSTS: "local:redis:6379" # 'redis' is the service name, 6379 is its internal port
     depends_on:
       - redis
+    networks:
+      - app-network
+
+  dynamodb-admin:
+    env_file: .env
+    build:
+      context: ./docker/dynamodb-admin
+      dockerfile: Dockerfile
+    ports:
+      - "${DOCKER_DYNAMODB_ADMIN_HOST_PORT:-8001}:8001"
+    environment:
+      DYNAMO_ENDPOINT: http://dynamodb:8000 # Points to our DynamoDB container
+      AWS_REGION: ${AWS_DEFAULT_REGION:-us-local-1} # Use region from .env
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-dummykey} # Use creds from .env
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-dummysecret} # Use creds from .env
+    depends_on:
+      - dynamodb
     networks:
       - app-network
 
