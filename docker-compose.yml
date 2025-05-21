@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ./docker/application
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./:/var/www/html
+    environment:
+      FRANKENPHP_CONFIG: "/var/www/html/docker/application/frankenphp.ini" # Example, adjust as needed
+      # Add other environment variables your application needs
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge 
