@@ -61,6 +61,63 @@ Your Laravel API should now be accessible (typically at `http://localhost` or th
 
 Refer to `docs/infrastructure.md` for more detailed information on the Docker setup and environment variables.
 
+## Log Configuration
+
+This starter kit is configured to output all logs in JSON format to stdout, making it compatible with container orchestration platforms and centralized logging systems.
+
+### Logging Features:
+
+- JSON-formatted logs for structured parsing
+- All application logs sent to stdout
+- Both Laravel and PHP native errors captured in the same format
+- Log configuration for both main application and Horizon workers
+
+### PHP Error Configuration:
+
+The PHP configuration is set up to ensure all errors are properly logged:
+
+```ini
+log_errors = On
+error_log = /dev/stdout
+display_errors = Off
+display_startup_errors = Off
+html_errors = Off
+error_reporting = E_ALL
+```
+
+## Debug Tools
+
+The starter kit includes a Debug Controller that helps test error handling, logging configurations, and monitoring integrations.
+
+### Debug Controller Features:
+
+The Debug Controller (`app/Http/Controllers/DebugController.php`) provides endpoints to trigger various types of errors and exceptions:
+
+- **/debug**: Triggers all error types at once in a "chaos error" scenario
+- **/debug/division-by-zero**: Triggers a division by zero error
+- **/debug/undefined-variable**: Triggers an undefined variable error
+- **/debug/type-error**: Triggers a type error
+- **/debug/out-of-bounds**: Triggers an array out of bounds error
+- **/debug/logic-exception**: Throws a LogicException
+- **/debug/runtime-exception**: Throws a RuntimeException
+- **/debug/query-exception**: Triggers a database query exception
+- **/debug/http-exception**: Throws an HTTP exception
+- **/debug/memory-limit**: Simulates hitting memory limit
+- **/debug/parse-error-example**: Shows example of parse error
+- **/debug/fatal-error**: Triggers a fatal error
+- **/debug/custom-exception**: Throws a custom exception
+- **/debug/random-error**: Randomly triggers one of the above errors
+
+### Using the Debug Controller:
+
+Use these endpoints to:
+1. Test your logging configuration
+2. Verify error capture in monitoring systems
+3. Check exception handling middleware
+4. Ensure errors are properly formatted in JSON
+
+**Warning**: These endpoints intentionally trigger errors and should only be used in development/testing environments.
+
 ## Working with DynamoDB
 
 This starter kit includes AWS DynamoDB Local for development, along with the necessary tools to create models and run migrations.

@@ -12,7 +12,7 @@ services:
     volumes:
       - ./:/var/www/html
     environment:
-      # FRANKENPHP_CONFIG: "/var/www/html/docker/application/frankenphp.ini" # Commented out
+      FRANKENPHP_CONFIG: "/var/www/html/docker/application/frankenphp.ini"
       # Laravel will read these from the .env file loaded into the container
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
@@ -74,7 +74,7 @@ services:
     volumes:
       - ./:/var/www/html
     environment:
-      # FRANKENPHP_CONFIG: "/var/www/html/docker/horizon/frankenphp.ini" # Commented out for Horizon as well
+      FRANKENPHP_CONFIG: "/var/www/html/docker/horizon/frankenphp.ini"
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
