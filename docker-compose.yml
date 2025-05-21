@@ -125,10 +125,10 @@ services:
     ports:
       - "${DOCKER_DYNAMODB_ADMIN_HOST_PORT:-8001}:8001"
     environment:
-      DYNAMO_ENDPOINT: http://dynamodb:8000 # Points to our DynamoDB container
+      DYNAMO_ENDPOINT: ${DYNAMODB_LOCAL_ENDPOINT:-http://dynamodb:8000} # Use env var with fallback
       AWS_REGION: ${AWS_DEFAULT_REGION:-us-local-1} # Use region from .env
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-dummykey} # Use creds from .env
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-dummysecret} # Use creds from .env
+      AWS_ACCESS_KEY_ID: dynamodblocal # For DynamoDB Local
+      AWS_SECRET_ACCESS_KEY: secret # For DynamoDB Local
     depends_on:
       - dynamodb
     networks:

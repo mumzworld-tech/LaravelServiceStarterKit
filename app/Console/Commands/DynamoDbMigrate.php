@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\File;
 
 class DynamoDbMigrate extends Command
 {
-    protected $signature = 'dynamodb:migrate 
+    protected $signature = 'migrate:dynamodb 
                             {--fresh : Drop all tables before migrating}
                             {--file= : Run a specific migration file}';
     protected $description = 'Run DynamoDB migrations';

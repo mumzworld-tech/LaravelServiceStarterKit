@@ -19,26 +19,13 @@ return new class extends Migration
             'TableName' => $tableName,
             'AttributeDefinitions' => [
                 [
-                    'AttributeName' => 'example_id', // Primary key
+                    'AttributeName' => 'example_id',          // Table HASH Key
                     'AttributeType' => 'S' 
                 ],
                 [
-                    'AttributeName' => 'name', // For GSI
-                    'AttributeType' => 'S'
-                ],
-                [
-                    'AttributeName' => 'item_count', // Example number attribute
-                    'AttributeType' => 'N'
-                ],
-                [
-                    'AttributeName' => 'is_enabled', // Example boolean (stored as string)
-                    'AttributeType' => 'S' 
-                ],
-                [
-                    'AttributeName' => 'last_processed_at', // Example datetime string
+                    'AttributeName' => 'name',                  // GSI HASH Key for name-index
                     'AttributeType' => 'S'
                 ]
-                // 'settings' (array/JSON) does not need to be in AttributeDefinitions unless it's a key
             ],
             'KeySchema' => [
                 [
@@ -56,13 +43,16 @@ return new class extends Migration
                         ]
                     ],
                     'Projection' => [
-                        'ProjectionType' => 'ALL' 
+                        'ProjectionType' => 'ALL'
                     ],
-                    // BillingMode for GSIs defaults to that of the table if PAY_PER_REQUEST.
-                    // If table is PROVISIONED, GSIs also need ProvisionedThroughput.
+                    // For PAY_PER_REQUEST tables, ProvisionedThroughput for GSIs is not specified.
                 ]
             ],
-            'BillingMode' => 'PAY_PER_REQUEST'
+            'BillingMode' => 'PAY_PER_REQUEST',
+            'StreamSpecification' => [
+                'StreamEnabled' => true,
+                'StreamViewType' => 'NEW_AND_OLD_IMAGES'
+            ]
         ]);
 
         // Wait until the table is created
