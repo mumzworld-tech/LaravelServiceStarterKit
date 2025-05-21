@@ -1,0 +1,57 @@
+# Dockerfile for Horizon Production (inherits from FrankenPHP base)
+FROM dunglas/frankenphp
+
+WORKDIR /var/www/html
+
+# Install system dependencies (if any specific to Horizon, otherwise often shared with app)
+# hadolint ignore=DL3008
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    zip \
+    unzip \
+    libzip-dev \
+    libicu-dev \
+    # Add any other system dependencies Horizon might need
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install PHP extensions (pcntl is crucial for Horizon, add others as needed)
+RUN install-php-extensions \
+    pdo_mysql \
+    bcmath \
+    pcntl \
+    sockets \
+    intl \
+    zip
+    # Add any other PHP extensions Horizon needs
+
+# Install Composer globally
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Copy Composer files
+COPY composer.json composer.lock ./
+
+# Install Composer dependencies (production: --no-dev)
+RUN composer install --no-interaction --no-plugins --no-scripts --prefer-dist --no-dev \
+    && composer clear-cache
+
+# Copy the rest of the application code (Horizon is part of this)
+COPY . .
+
+# Set permissions (if Horizon needs to write to specific dirs beyond what Laravel app does)
+# Usually, Horizon runs as the same user and leverages Laravel's storage.
+# RUN chown -R www-data:www-data storage bootstrap/cache ...
+
+# The command to run Horizon ("php artisan horizon") is specified in docker-compose.yml.
+
+# Application code (including Horizon) is typically mounted via volumes.
+# If building a production image or specific assets, uncomment and adjust:
+# COPY . /var/www/html
+
+# Optional: Install PHP extensions (e.g., pcntl for Horizon)
+# RUN install-php-extensions pcntl pdo_mysql zip ...
+
+# Command to run Horizon is specified in docker-compose.yml
+
+# The command to run Horizon is specified in docker-compose.yml
+# (e.g., "php artisan horizon")
+# If you were to run FrankenPHP as a server for Horizon (not typical for workers), you'd configure it here. 

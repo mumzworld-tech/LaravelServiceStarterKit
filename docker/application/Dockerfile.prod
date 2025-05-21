@@ -1,0 +1,75 @@
+# Use the official FrankenPHP image - it includes PHP, Caddy, and common extensions
+FROM dunglas/frankenphp
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Install system dependencies required by some PHP extensions or tools
+# hadolint ignore=DL3008
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    zip \
+    unzip \
+    libzip-dev \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    libonig-dev \
+    libxml2-dev \
+    libicu-dev \
+    # Add any other system dependencies your app might need
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install PHP extensions commonly used by Laravel
+# The base dunglas/frankenphp image has many, but you might need more specific ones.
+# Use 'docker-php-extension-installer' or 'install-php-extensions' (provided by base image)
+RUN install-php-extensions \
+    pdo_mysql \
+    bcmath \
+    gd \
+    exif \
+    pcntl \
+    sockets \
+    intl \
+    zip
+    # Add any other PHP extensions your app needs
+
+# Install Composer globally
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Copy Composer files
+COPY composer.json composer.lock ./
+
+# Install Composer dependencies
+# For production, consider --no-dev. For development, you might want dev dependencies.
+# --no-interaction: Do not ask any interactive questions
+# --no-plugins: Disable plugins during installations
+# --no-scripts: Do not execute scripts defined in composer.json
+# --prefer-dist: Forces installation from package dist
+RUN composer install --no-interaction --no-plugins --no-scripts --prefer-dist --no-dev \
+    && composer clear-cache
+
+# Copy the rest of the application code
+COPY . .
+
+# Set permissions for Laravel storage and bootstrap/cache folders
+# The www-data user is typically used by PHP-FPM/web servers.
+# FrankenPHP (Caddy) might run as 'frankenphp' user or root then drop privileges.
+# Adjust user/group if necessary based on how FrankenPHP runs in the base image.
+RUN chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
+
+# Expose port 80 and 443 (handled by FrankenPHP base image and Caddy)
+# No need to explicitly EXPOSE here as the base image does it.
+
+# The base image CMD will start Caddy/FrankenPHP.
+# You can customize the Caddyfile by placing a 'Caddyfile' in the docker/application directory
+# and ensuring it's copied here if needed, or by configuring via FRANKENPHP_CONFIG env var.
+# For Laravel, the Caddyfile should be configured to point to public/index.php.
+# The base image often auto-detects Laravel.
+
+# Optional: If you have an entrypoint script for tasks like migrations
+# ENTRYPOINT ["docker/application/docker-entrypoint.sh"]
+
+# The default CMD from dunglas/frankenphp should work if your Caddyfile is set up correctly
+# or if Laravel is auto-detected. You typically don't need to override it unless for specific needs. 

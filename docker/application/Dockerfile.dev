@@ -1,0 +1,64 @@
+# Dockerfile for Development (inherits from FrankenPHP base)
+FROM dunglas/frankenphp
+
+WORKDIR /var/www/html
+
+# Environment: development (Laravel specific, set in .env or docker-compose environment section)
+# ENV APP_ENV=local
+# ENV APP_DEBUG=true
+
+# Copy development PHP INI files (opcache, xdebug)
+COPY docker/application/opcache-dev.ini /usr/local/etc/php/conf.d/opcache-dev.ini
+COPY docker/application/xdebug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+
+# Install system dependencies (git, zip, common libs for extensions)
+# hadolint ignore=DL3008
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    zip \
+    unzip \
+    libzip-dev \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    libonig-dev \
+    libxml2-dev \
+    libicu-dev \
+    # Add any other system dependencies your app might need for dev
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install PHP extensions (common Laravel ones + Xdebug for dev)
+# Note: Xdebug can impact performance, enable it conditionally or use a separate build stage if preferred.
+RUN install-php-extensions \
+    pdo_mysql \
+    bcmath \
+    gd \
+    exif \
+    pcntl \
+    sockets \
+    intl \
+    zip \
+    xdebug # For development
+    # Add any other PHP extensions your app needs for dev
+
+# Install Composer globally
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Copy Composer files
+COPY composer.json composer.lock ./
+
+# Install Composer dependencies (including dev requirements)
+RUN composer install --no-interaction --no-plugins --no-scripts --prefer-dist \
+    && composer clear-cache
+
+# Copy the rest of the application code
+# For development, this is often less critical as the primary source of truth is the mounted volume.
+# However, it ensures the image is runnable standalone for checks and can pre-warm caches if artisan commands are run.
+COPY . .
+
+# Set permissions for Laravel storage and bootstrap/cache folders
+RUN chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
+
+# The base image CMD will start Caddy/FrankenPHP.
+# Development relies on volume mounts for live code changes. 
