@@ -24,8 +24,8 @@ RUN install-php-extensions \
     zip
     # Add any other PHP extensions Horizon needs
 
-# Install redis extension via PECL
-RUN pecl install redis && docker-php-ext-enable redis
+# Install redis and OpenTelemetry extensions via PECL
+RUN pecl install redis opentelemetry && docker-php-ext-enable redis opentelemetry
 
 # Install Composer globally
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
