@@ -19,6 +19,9 @@ This starter kit includes a multi-container Docker setup managed by `docker-comp
 *   **`mysql`**: MySQL database service.
 *   **`redis`**: Redis in-memory data store (for caching, sessions, queues).
 *   **`dynamodb`**: AWS DynamoDB Local instance for development purposes.
+*   **`otel-collector`**: OpenTelemetry Collector for receiving and processing traces.
+*   **`tempo`**: Grafana Tempo for storing and querying distributed traces.
+*   **`grafana`**: Grafana dashboard for visualizing traces and monitoring.
 *   **`phpmyadmin`**: Web UI for managing the MySQL database.
 *   **`redis-commander`**: Web UI for managing the Redis data store.
 *   **`dynamodb-admin`**: Web UI for managing the local DynamoDB data.
@@ -28,6 +31,7 @@ This starter kit includes a multi-container Docker setup managed by `docker-comp
 Once the containers are running, you can access the following admin interfaces:
 
 *   **Main Application**: http://localhost:80 (default port, configurable via `DOCKER_APP_HTTP_PORT`)
+*   **Grafana Dashboard**: http://localhost:3001 (admin/admin) - for viewing distributed traces
 *   **phpMyAdmin**: http://localhost:8080 (configurable via `DOCKER_PHPMYADMIN_HOST_PORT`)
 *   **Redis Commander**: http://localhost:8081 (configurable via `DOCKER_REDIS_COMMANDER_HOST_PORT`)
 *   **DynamoDB Admin**: http://localhost:8001 (configurable via `DOCKER_DYNAMODB_ADMIN_HOST_PORT`)
@@ -36,9 +40,21 @@ Once the containers are running, you can access the following admin interfaces:
 ### Getting Started with Docker:
 
 1.  Ensure Docker Desktop (or Docker Engine with Compose V2) is installed and running.
-2.  Copy `example.env` to `.env` and customize as needed (especially `APP_KEY` after first run, and any desired port changes).
+2.  Copy `example.env` to `.env` and customize as needed:
     ```bash
     cp example.env .env
+    ```
+    **Important**: Add your GitHub token to access private repositories:
+    ```env
+    GITHUB_TOKEN=your_github_token_here
+    ```
+    The OpenTelemetry configuration is pre-configured but can be customized:
+    ```env
+    OTEL_SERVICE_NAME=laravel-starter-kit-service
+    OTEL_TRACES_EXPORTER=otlp
+    OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    OTEL_PROPAGATORS=baggage,tracecontext
+    OTEL_PHP_AUTOLOAD_ENABLED=true
     ```
 3.  Build and start the containers:
     ```bash
@@ -240,3 +256,74 @@ php artisan migrate:dynamodb --fresh
 4. **Endpoint**: For local development, the endpoint is configured as `http://dynamodb:8000` (Docker service name).
 
 For more details on working with DynamoDB in Laravel, refer to the [baopham/laravel-dynamodb](https://github.com/baopham/laravel-dynamodb) documentation.
+
+## OpenTelemetry & Distributed Tracing
+
+This starter kit includes comprehensive OpenTelemetry integration using the `mumzworld/laravel-opentelemetry` package for distributed tracing and observability.
+
+### Features
+
+- ✅ **Automatic Tracing**: HTTP requests, DynamoDB operations, cache operations
+- ✅ **Custom Tracing**: TracerService for business logic tracing
+- ✅ **Complete Observability Stack**: Collector, Tempo, Grafana
+- ✅ **Production Ready**: Configurable sampling and performance optimizations
+
+### Quick Start
+
+1. **Ensure GitHub token is set** in your `.env` file (required for private package access)
+2. **Start services** with `docker compose up --build -d`
+3. **Access Grafana** at http://localhost:3001 (admin/admin)
+4. **Test tracing** with built-in endpoints:
+
+```bash
+# Test OpenTelemetry functionality
+curl http://localhost/api/opentelemetry/test
+
+# View configuration
+curl http://localhost/api/opentelemetry/config
+
+# Test nested spans
+curl http://localhost/api/opentelemetry/nested
+```
+
+### Custom Tracing Example
+
+```php
+use Mumzworld\LaravelOpenTelemetry\Services\TracerService;
+
+class UserService 
+{
+    public function __construct(private TracerService $tracer) {}
+    
+    public function createUser(array $data): User
+    {
+        return $this->tracer->trace('user.create', function() use ($data) {
+            return User::create($data);
+        }, [
+            'user.email' => $data['email'],
+            'user.type' => $data['type'] ?? 'regular'
+        ]);
+    }
+}
+```
+
+### Viewing Traces
+
+1. **Open Grafana**: http://localhost:3001
+2. **Navigate**: Explore → Tempo
+3. **Query traces**: `{service.name="laravel-starter-kit-service"}`
+
+### GitHub Token Requirement
+
+The `mumzworld/laravel-opentelemetry` package is hosted in a private repository. **You must provide a GitHub token** in your `.env` file:
+
+```env
+GITHUB_TOKEN=your_github_token_here
+```
+
+**Fallback Behavior**: If no token is provided, Docker build will continue without the OpenTelemetry package (graceful degradation).
+
+### Detailed Setup
+
+For comprehensive setup instructions, configuration options, and troubleshooting, see [docs/OPENTELEMETRY_SETUP.md](docs/OPENTELEMETRY_SETUP.md).
+

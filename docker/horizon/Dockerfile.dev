@@ -24,19 +24,33 @@ RUN install-php-extensions \
     zip
     # Add any other PHP extensions Horizon needs
 
-# Install redis extension via PECL
-RUN pecl install redis && docker-php-ext-enable redis
+# Install redis and OpenTelemetry extensions via PECL
+RUN pecl install redis opentelemetry && docker-php-ext-enable redis opentelemetry
 
 # Install Composer globally
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 RUN chmod +x /usr/bin/composer
 
-# Copy Composer files from project root
-COPY composer.json composer.lock ./
+# Copy composer files and .env file to extract GitHub token
+COPY composer.json composer.lock .env ./
+
+# GitHub token for private repository access
+ARG GITHUB_TOKEN
 
 # Install Composer dependencies (including dev requirements for Horizon development/testing)
-RUN composer install --no-interaction --no-plugins --no-scripts --prefer-dist \
-    && composer clear-cache
+RUN GITHUB_TOKEN_FROM_ENV=$(grep '^GITHUB_TOKEN=' .env 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "") && \
+    FINAL_TOKEN="${GITHUB_TOKEN:-$GITHUB_TOKEN_FROM_ENV}" && \
+    if [ -n "$FINAL_TOKEN" ]; then \
+        composer config github-oauth.github.com $FINAL_TOKEN; \
+        composer install --no-interaction --no-plugins --no-scripts --prefer-dist; \
+    else \
+        echo "GitHub token not found - mumzworld/laravel-opentelemetry will be skipped"; \
+        cp composer.json composer.json.backup; \
+        sed -i '/"mumzworld\/laravel-opentelemetry"/d' composer.json; \
+        composer install --no-interaction --no-plugins --no-scripts --prefer-dist; \
+        mv composer.json.backup composer.json; \
+    fi && \
+    composer clear-cache
 
 # Copy the rest of the application code (Horizon is part of this) from project root
 COPY . .
