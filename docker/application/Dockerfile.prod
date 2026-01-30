@@ -1,5 +1,5 @@
 # Use the official FrankenPHP image - it includes PHP, Caddy, and common extensions
-FROM dunglas/frankenphp
+FROM dunglas/frankenphp:1-php8.3-bookworm
 
 # Set working directory
 WORKDIR /var/www/html

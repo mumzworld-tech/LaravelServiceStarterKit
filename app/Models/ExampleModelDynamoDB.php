@@ -97,6 +97,8 @@ class ExampleModelDynamoDB extends DynamoDbModel
      */
     public function __construct(array $attributes = [])
     {
+        $this->table = config('app.dynamodb_example_table', 'example_model_dynamodb');
+        
         parent::__construct($attributes);
 
         // Set default for primary key if it's not auto-incrementing and not provided

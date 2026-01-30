@@ -36,8 +36,8 @@ RUN docker-php-ext-configure gd --with-jpeg --with-webp --with-freetype \
 # Install redis and OpenTelemetry extensions via PECL
 RUN pecl install redis opentelemetry && docker-php-ext-enable redis opentelemetry
 
-# Install Xdebug (for development)
-RUN pecl install xdebug && docker-php-ext-enable xdebug
+# Install Xdebug (for development) - specify stable version
+RUN pecl install xdebug-3.4.0 && docker-php-ext-enable xdebug
 
 # Set working directory
 WORKDIR /var/www/html

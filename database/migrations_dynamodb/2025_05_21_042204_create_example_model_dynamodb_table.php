@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         $client = app(DynamoDbClientService::class)->getClient();
-        $tableName = 'example_model_dynamodb';
+        $tableName = config('app.dynamodb_example_table', 'example_model_dynamodb');
 
         $client->createTable([
             'TableName' => $tableName,
@@ -67,7 +67,7 @@ return new class extends Migration
     public function down(): void
     {
         $client = app(DynamoDbClientService::class)->getClient();
-        $tableName = 'example_model_dynamodb';
+        $tableName = config('app.dynamodb_example_table', 'example_model_dynamodb');
 
         $client->deleteTable([
             'TableName' => $tableName
