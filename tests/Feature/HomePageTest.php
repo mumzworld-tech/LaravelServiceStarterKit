@@ -23,6 +23,7 @@ class HomePageTest extends TestCase
     {
         $response = $this->get('/');
 
-        $response->assertHeader('Content-Type', 'text/html; charset=UTF-8');
+        $contentType = strtolower($response->headers->get('Content-Type'));
+        $this->assertEquals('text/html; charset=utf-8', $contentType);
     }
 }
