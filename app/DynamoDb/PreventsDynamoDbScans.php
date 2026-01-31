@@ -103,8 +103,20 @@ trait PreventsDynamoDbScans
      *
      * @internal Intended for testing purposes only
      */
+    /**
+     * Enable fail-on-scan globally by modifying runtime config.
+     *
+     * WARNING: This modifies global config at runtime and should only be used
+     * in test setup/teardown. Do not use in production code as it affects
+     * all subsequent queries in the same request/process.
+     *
+     * @internal Intended for testing purposes only
+     */
     public static function failOnScanGlobally(): void
     {
+        if (app()->environment('production')) {
+            throw new \RuntimeException('Global scan configuration cannot be modified in production environment');
+        }
         config(['dynamodb.fail_on_scan' => true]);
     }
 
@@ -119,6 +131,9 @@ trait PreventsDynamoDbScans
      */
     public static function allowScansGlobally(): void
     {
+        if (app()->environment('production')) {
+            throw new \RuntimeException('Global scan configuration cannot be modified in production environment');
+        }
         config(['dynamodb.fail_on_scan' => false]);
     }
 }
