@@ -35,17 +35,18 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.json') }}
           restore-keys: ${{ runner.os }}-composer-
 
       - name: Remove OpenTelemetry package (not needed for tests)
         run: |
           # Remove the private repository and OpenTelemetry package to avoid auth issues in CI
           composer config --unset repositories.0 || true
+          rm composer.lock || true
           composer remove mumzworld/laravel-opentelemetry --no-interaction --no-update || true
 
       - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader --ignore-platform-req=ext-opentelemetry
+        run: composer update --no-interaction --prefer-dist --optimize-autoloader --ignore-platform-req=ext-opentelemetry
 
       - name: Copy environment file
         run: cp .env.example .env
