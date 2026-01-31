@@ -95,8 +95,13 @@ trait PreventsDynamoDbScans
     }
 
     /**
-     * Static method to enable fail-on-scan globally for this model class.
-     * Useful in test setup.
+     * Enable fail-on-scan globally by modifying runtime config.
+     *
+     * WARNING: This modifies global config at runtime and should only be used
+     * in test setup/teardown. Do not use in production code as it affects
+     * all subsequent queries in the same request/process.
+     *
+     * @internal Intended for testing purposes only
      */
     public static function failOnScanGlobally(): void
     {
@@ -104,7 +109,13 @@ trait PreventsDynamoDbScans
     }
 
     /**
-     * Static method to disable fail-on-scan globally.
+     * Disable fail-on-scan globally by modifying runtime config.
+     *
+     * WARNING: This modifies global config at runtime and should only be used
+     * in test setup/teardown. Do not use in production code as it affects
+     * all subsequent queries in the same request/process.
+     *
+     * @internal Intended for testing purposes only
      */
     public static function allowScansGlobally(): void
     {

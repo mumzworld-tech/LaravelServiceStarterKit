@@ -20,6 +20,11 @@ class ScanGuardedQueryBuilder extends DynamoDbQueryBuilder
     protected bool $logScans = true;
 
     /**
+     * Whether scan was explicitly allowed (for audit logging).
+     */
+    protected bool $scanAllowed = false;
+
+    /**
      * Context for logging/error messages.
      */
     protected string $scanContext = '';
@@ -53,11 +58,12 @@ class ScanGuardedQueryBuilder extends DynamoDbQueryBuilder
 
     /**
      * Allow scan for this specific query (explicit opt-in).
+     * Still logs the scan at info level for audit purposes.
      */
     public function allowScan(): static
     {
         $this->failOnScan = false;
-        $this->logScans = false;
+        $this->scanAllowed = true;
         return $this;
     }
 
@@ -91,11 +97,18 @@ class ScanGuardedQueryBuilder extends DynamoDbQueryBuilder
             'wheres' => $this->wheres,
             'has_limit' => isset($this->limit),
             'limit' => $this->limit ?? 'unlimited',
+            'allowed' => $this->scanAllowed,
             'trace' => $this->getRelevantStackTrace(),
         ];
 
         if ($this->logScans) {
-            Log::warning('DynamoDB SCAN operation detected', $data);
+            if ($this->scanAllowed) {
+                // Log at info level for explicitly allowed scans (audit trail)
+                Log::info('DynamoDB SCAN operation allowed', $data);
+            } else {
+                // Log at warning level for unexpected scans
+                Log::warning('DynamoDB SCAN operation detected', $data);
+            }
         }
 
         if ($this->shouldFailOnScan()) {
@@ -174,6 +187,7 @@ class ScanGuardedQueryBuilder extends DynamoDbQueryBuilder
         $query = new static($this->getModel());
         $query->failOnScan = $this->failOnScan;
         $query->logScans = $this->logScans;
+        $query->scanAllowed = $this->scanAllowed;
         $query->scanContext = $this->scanContext;
 
         return $query;

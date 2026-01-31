@@ -164,8 +164,13 @@ class ScanGuardedQueryBuilderTest extends TestCase
      */
     public function test_scan_detection_does_not_throw_when_allow_scan_called(): void
     {
-        // allowScan disables both logging and exceptions
-        Log::shouldReceive('warning')->never();
+        // allowScan disables exceptions but still logs at info level for audit
+        Log::shouldReceive('info')
+            ->once()
+            ->withArgs(function ($message, $context) {
+                return $message === 'DynamoDB SCAN operation allowed'
+                    && ($context['allowed'] ?? false) === true;
+            });
 
         $model = $this->createMock(ExampleModelDynamoDB::class);
         $model->method('getClient')->willReturn(null);
@@ -174,7 +179,7 @@ class ScanGuardedQueryBuilderTest extends TestCase
 
         $builder = new TestableScanGuardedQueryBuilder($model);
         $builder->failOnScan(true);
-        $builder->allowScan(); // This should override failOnScan
+        $builder->allowScan(); // This should override failOnScan but still log
 
         // Simulate a scan operation - should not throw
         $rawQuery = new RawDynamoDbQuery('Scan', ['TableName' => 'test_table']);

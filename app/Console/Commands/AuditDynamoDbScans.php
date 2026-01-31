@@ -182,15 +182,21 @@ class AuditDynamoDbScans extends Command
 
             $instance = $reflection->newInstanceWithoutConstructor();
 
-            // Get table name
-            $tableProperty = $reflection->getProperty('table');
-            $tableProperty->setAccessible(true);
-            $table = $tableProperty->getValue($instance) ?? $this->snakeCase($reflection->getShortName());
+            // Get table name (with fallback)
+            $table = $this->snakeCase($reflection->getShortName());
+            if ($reflection->hasProperty('table')) {
+                $tableProperty = $reflection->getProperty('table');
+                $tableProperty->setAccessible(true);
+                $table = $tableProperty->getValue($instance) ?? $table;
+            }
 
-            // Get primary key
-            $keyProperty = $reflection->getProperty('primaryKey');
-            $keyProperty->setAccessible(true);
-            $primaryKey = $keyProperty->getValue($instance) ?? 'id';
+            // Get primary key (with fallback)
+            $primaryKey = 'id';
+            if ($reflection->hasProperty('primaryKey')) {
+                $keyProperty = $reflection->getProperty('primaryKey');
+                $keyProperty->setAccessible(true);
+                $primaryKey = $keyProperty->getValue($instance) ?? $primaryKey;
+            }
 
             // Get GSI indexes
             $indexes = [];
