@@ -14,10 +14,6 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
-
 // OpenTelemetry test routes (from package)
 if (app()->environment(['local', 'testing'])) {
     require __DIR__ . '/opentelemetry-test.php';
@@ -28,10 +24,5 @@ Route::prefix('v1')->group(function () {
     // Public routes
     Route::get('/health', function () {
         return response()->json(['status' => 'ok']);
-    });
-    
-    // Protected routes
-    Route::middleware('auth:sanctum')->group(function () {
-        // Your protected API endpoints here
     });
 }); 

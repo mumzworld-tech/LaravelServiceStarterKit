@@ -123,4 +123,16 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | DynamoDB Table Names
+    |--------------------------------------------------------------------------
+    |
+    | Configure DynamoDB table names via environment variables to support
+    | different table names across environments (staging, production, etc).
+    |
+    */
+
+    'dynamodb_example_table' => env('DYNAMODB_EXAMPLE_TABLE', 'example_model_dynamodb'),
+
 ];

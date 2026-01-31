@@ -6,7 +6,7 @@ The aim is to provide a quick and consistent setup for Mumzworld developers, inc
 
 ## Dockerized Development Environment
 
-This starter kit includes a multi-container Docker setup managed by `docker-compose.yml`. The environment is configurable via a `.env` file (copy `example.env` to `.env` to get started).
+This starter kit includes a multi-container Docker setup managed by `docker-compose.yml`. The environment is configurable via a `.env` file (copy `.env.example` to `.env` to get started).
 
 ### Included Services/Containers:
 
@@ -40,9 +40,9 @@ Once the containers are running, you can access the following admin interfaces:
 ### Getting Started with Docker:
 
 1.  Ensure Docker Desktop (or Docker Engine with Compose V2) is installed and running.
-2.  Copy `example.env` to `.env` and customize as needed:
+2.  Copy `.env.example` to `.env` and customize as needed:
     ```bash
-    cp example.env .env
+    cp .env.example .env
     ```
     **Important**: Add your GitHub token to access private repositories:
     ```env
@@ -137,6 +137,43 @@ Use these endpoints to:
 ## Working with DynamoDB
 
 This starter kit includes AWS DynamoDB Local for development, along with the necessary tools to create models and run migrations.
+
+### Environment-Specific Table Names
+
+DynamoDB table names can be configured via environment variables to support different table names across environments (staging, production, etc.).
+
+**Configuration:**
+
+Add table name variables to your `.env` file:
+```env
+DYNAMODB_EXAMPLE_TABLE=example_model_dynamodb
+```
+
+The starter kit includes an example model that demonstrates this pattern. When creating your own models, follow this approach:
+
+1. **Add to `config/app.php`:**
+```php
+'dynamodb_your_table' => env('DYNAMODB_YOUR_TABLE', 'default_table_name'),
+```
+
+2. **Update your model constructor:**
+```php
+public function __construct(array $attributes = [])
+{
+    $this->table = config('app.dynamodb_your_table', 'default_table_name');
+    parent::__construct($attributes);
+}
+```
+
+3. **Update migrations:**
+```php
+$tableName = config('app.dynamodb_your_table', 'default_table_name');
+```
+
+This allows you to use different table names per environment:
+- Development: `dev_your_table`
+- Staging: `staging_your_table`
+- Production: `prod_your_table`
 
 ### Creating DynamoDB Models
 
@@ -326,4 +363,30 @@ GITHUB_TOKEN=your_github_token_here
 ### Detailed Setup
 
 For comprehensive setup instructions, configuration options, and troubleshooting, see [docs/OPENTELEMETRY_SETUP.md](docs/OPENTELEMETRY_SETUP.md).
+
+## Architecture Notes
+
+This starter kit is designed as a microservice template with the following architecture:
+
+### Data Storage
+- **DynamoDB**: Primary data storage (configured via environment variables)
+- **Redis**: Caching, sessions, and queue management
+- **MySQL**: Available but optional (not required for DynamoDB-only services)
+
+### Authentication
+This starter kit does not include user authentication by default, as it's designed for microservices that:
+- Receive user context from external systems (API gateways, auth services)
+- Don't manage user sessions directly
+- Focus on business logic rather than authentication
+
+If your service requires authentication, you can add Laravel Sanctum or Passport as needed.
+
+### Removed Components
+The following Laravel defaults have been removed to keep the starter kit lean:
+- MySQL user migrations (users, password_resets tables)
+- User model and factory
+- Sanctum authentication routes
+- Default database seeders
+
+This keeps the focus on DynamoDB-based microservices while maintaining the flexibility to add these components back if needed.
 
