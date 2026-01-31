@@ -73,4 +73,21 @@ return [
             'debug'  => env('DYNAMODB_DEBUG', true),
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Scan Prevention Settings
+    |--------------------------------------------------------------------------
+    |
+    | Configure how the application handles DynamoDB Scan operations.
+    | Scans are expensive and should be avoided in production.
+    |
+    */
+
+    // When true, throws an exception on any scan operation
+    // Recommended: set to true in local/testing environments
+    'fail_on_scan' => env('DYNAMODB_FAIL_ON_SCAN', false),
+
+    // Log all scan operations (recommended for monitoring)
+    'log_scans' => env('DYNAMODB_LOG_SCANS', true),
 ];
