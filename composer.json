@@ -8,12 +8,6 @@
         "framework"
     ],
     "license": "MIT",
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/mumzworld-tech/laravel-opentelemetry"
-        }
-    ],
     "require": {
         "php": "^8.2",
         "baopham/dynamodb": "^6.6",
