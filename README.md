@@ -292,19 +292,48 @@ class YourEndpointTest extends TestCase
 
 ### CI/CD Integration
 
-The test suite is configured for easy CI/CD integration:
+This starter kit includes a GitHub Actions workflow for automated test coverage on pull requests.
+
+#### Automatic Coverage on PR Review
+
+A workflow is configured at `.github/workflows/test-coverage.yml` that:
+1. **Triggers** when the `review` label is added to a PR
+2. **Runs** the full test suite with PCOV coverage
+3. **Posts** a coverage report as a comment on the PR
+
+**To use:**
+1. Create a PR with your changes
+2. Add the `review` label to the PR
+3. The workflow runs and posts coverage results as a comment
+
+The comment includes:
+- Coverage summary (Lines, Methods, Classes percentages)
+- Expandable full coverage report
+- Link to the GitHub Actions run
+
+#### Manual GitHub Actions Example
 
 ```yaml
-# Example GitHub Actions step
+# Example GitHub Actions step for custom workflows
+- name: Setup PHP with PCOV
+  uses: shivammathur/setup-php@v2
+  with:
+    php-version: '8.2'
+    extensions: mbstring, xml, pcov
+    coverage: pcov
+
+- name: Install dependencies
+  run: composer install --ignore-platform-req=ext-opentelemetry
+
 - name: Run Tests
   run: composer test:phpunit
 
-# With coverage (requires Xdebug/PCOV)
+# With coverage
 - name: Run Tests with Coverage
-  run: composer test:coverage
+  run: php -d pcov.enabled=1 vendor/bin/phpunit --coverage-clover coverage/clover.xml
 
-- name: Upload Coverage
-  uses: codecov/codecov-action@v3
+- name: Upload Coverage to Codecov
+  uses: codecov/codecov-action@v4
   with:
     files: coverage/clover.xml
 ```
