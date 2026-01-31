@@ -11,6 +11,15 @@ use Tests\TestCase;
 
 class ScanGuardedQueryBuilderTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Reset config to defaults before each test to ensure consistent behavior
+        config(['dynamodb.fail_on_scan' => false]);
+        config(['dynamodb.log_scans' => true]);
+    }
+
     /**
      * Test that ScanGuardedQueryBuilder can be instantiated.
      */
