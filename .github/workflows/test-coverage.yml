@@ -4,6 +4,11 @@ on:
   pull_request:
     types: [labeled]
 
+# Required for posting PR comments and accessing private repos
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   coverage:
     # Only run when 'review' label is added
@@ -32,6 +37,12 @@ jobs:
           path: ${{ steps.composer-cache.outputs.dir }}
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
           restore-keys: ${{ runner.os }}-composer-
+
+      - name: Remove OpenTelemetry package (not needed for tests)
+        run: |
+          # Remove the private repository and OpenTelemetry package to avoid auth issues in CI
+          composer config --unset repositories.0 || true
+          composer remove mumzworld/laravel-opentelemetry --no-interaction --no-update || true
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader --ignore-platform-req=ext-opentelemetry
