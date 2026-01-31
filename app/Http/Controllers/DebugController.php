@@ -66,18 +66,11 @@ class DebugController extends Controller
      */
     public function divisionByZero()
     {
-        try {
-            $numerator = 10;
-            $denominator = 0;
-            $result = $numerator / $denominator;
-            
-            return "This won't be reached: $result";
-        } catch (\Throwable $e) {
-            // Log the error to stderr manually
-            error_log('PHP Error: Division by zero - ' . $e->getMessage() . ' in ' . $e->getFile() . ' on line ' . $e->getLine());
-            error_log('Stack trace: ' . $e->getTraceAsString());
-            throw $e;
-        }
+        $numerator = 10;
+        $denominator = 0;
+        $result = $numerator / $denominator;
+
+        return "This won't be reached: $result";
     }
 
     /**

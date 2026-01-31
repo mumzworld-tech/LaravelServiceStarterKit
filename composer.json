@@ -8,12 +8,6 @@
         "framework"
     ],
     "license": "MIT",
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/mumzworld-tech/laravel-opentelemetry"
-        }
-    ],
     "require": {
         "php": "^8.2",
         "baopham/dynamodb": "^6.6",
@@ -67,6 +61,23 @@
         "test": [
             "@php artisan config:clear --ansi",
             "@php artisan test"
+        ],
+        "test:phpunit": [
+            "@php -d error_reporting='E_ALL & ~E_USER_WARNING' vendor/bin/phpunit"
+        ],
+        "test:coverage": [
+            "@php -d error_reporting='E_ALL & ~E_USER_WARNING' -d xdebug.mode=coverage vendor/bin/phpunit --coverage-html coverage/html --coverage-clover coverage/clover.xml --coverage-text"
+        ],
+        "test:coverage:pcov": [
+            "@php -d error_reporting='E_ALL & ~E_USER_WARNING' -d pcov.enabled=1 vendor/bin/phpunit --coverage-html coverage/html --coverage-clover coverage/clover.xml --coverage-text"
+        ],
+        "test:unit": [
+            "@php artisan config:clear --ansi",
+            "@php artisan test --testsuite=Unit"
+        ],
+        "test:feature": [
+            "@php artisan config:clear --ansi",
+            "@php artisan test --testsuite=Feature"
         ]
     },
     "extra": {
@@ -80,7 +91,8 @@
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
-            "php-http/discovery": true
+            "php-http/discovery": true,
+            "tbachert/spi": true
         }
     },
     "minimum-stability": "stable",
