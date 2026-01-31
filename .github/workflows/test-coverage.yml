@@ -40,10 +40,13 @@ jobs:
 
       - name: Remove OpenTelemetry package (not needed for tests)
         run: |
-          # Remove the private repository and OpenTelemetry package to avoid auth issues in CI
-          composer config --unset repositories.0 || true
-          rm composer.lock || true
-          composer remove mumzworld/laravel-opentelemetry --no-interaction --no-update || true
+          # Use jq to remove private repository and package from composer.json
+          jq 'del(.repositories) | del(.require["mumzworld/laravel-opentelemetry"])' composer.json > composer.tmp && mv composer.tmp composer.json
+          # Remove composer.lock to force fresh resolution
+          rm -f composer.lock
+          # Show the modified composer.json require section for debugging
+          echo "Modified composer.json require section:"
+          jq '.require' composer.json
 
       - name: Install dependencies
         run: composer update --no-interaction --prefer-dist --optimize-autoloader --ignore-platform-req=ext-opentelemetry
