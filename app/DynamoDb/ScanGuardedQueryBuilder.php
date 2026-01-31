@@ -152,8 +152,8 @@ class ScanGuardedQueryBuilder extends DynamoDbQueryBuilder
         return array_values(array_filter($trace, function ($frame) {
             $file = $frame['file'] ?? '';
 
-            // Skip vendor files except for useful context
-            if (str_contains($file, '/vendor/') && !str_contains($file, '/app/')) {
+            // Skip vendor files
+            if (str_contains($file, '/vendor/')) {
                 return false;
             }
 
@@ -174,6 +174,7 @@ class ScanGuardedQueryBuilder extends DynamoDbQueryBuilder
         $query = new static($this->getModel());
         $query->failOnScan = $this->failOnScan;
         $query->logScans = $this->logScans;
+        $query->scanContext = $this->scanContext;
 
         return $query;
     }

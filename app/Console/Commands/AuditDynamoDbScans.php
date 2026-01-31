@@ -88,33 +88,43 @@ class AuditDynamoDbScans extends Command
 
     public function handle(): int
     {
-        $this->info('Auditing DynamoDB usage for potential scan operations...');
-        $this->newLine();
+        $jsonOutput = $this->option('json');
+
+        if (!$jsonOutput) {
+            $this->info('Auditing DynamoDB usage for potential scan operations...');
+            $this->newLine();
+        }
 
         // Discover DynamoDB models
         $this->discoverDynamoDbModels();
 
         if (empty($this->dynamoDbModels)) {
-            $this->warn('No DynamoDB models found in the application.');
+            if ($jsonOutput) {
+                $this->outputJson();
+            } else {
+                $this->warn('No DynamoDB models found in the application.');
+            }
             return self::SUCCESS;
         }
 
-        $this->info('Found ' . count($this->dynamoDbModels) . ' DynamoDB model(s):');
-        foreach ($this->dynamoDbModels as $model => $info) {
-            $this->line("  - {$model}");
-            $this->line("    Table: {$info['table']}, Primary Key: {$info['primary_key']}");
-            if (!empty($info['indexes'])) {
-                $this->line("    GSIs: " . implode(', ', array_keys($info['indexes'])));
+        if (!$jsonOutput) {
+            $this->info('Found ' . count($this->dynamoDbModels) . ' DynamoDB model(s):');
+            foreach ($this->dynamoDbModels as $model => $info) {
+                $this->line("  - {$model}");
+                $this->line("    Table: {$info['table']}, Primary Key: {$info['primary_key']}");
+                if (!empty($info['indexes'])) {
+                    $this->line("    GSIs: " . implode(', ', array_keys($info['indexes'])));
+                }
             }
+            $this->newLine();
         }
-        $this->newLine();
 
         // Audit the codebase
         $path = $this->option('path') ?: app_path();
-        $this->auditPath($path);
+        $this->auditPath($path, !$jsonOutput);
 
         // Output results
-        if ($this->option('json')) {
+        if ($jsonOutput) {
             $this->outputJson();
         } else {
             $this->outputTable();
@@ -190,10 +200,10 @@ class AuditDynamoDbScans extends Command
                 $indexes = $indexProperty->getValue($instance) ?? [];
             }
 
-            // Check if using PreventsDynamoDbScans trait
+            // Check if using PreventsDynamoDbScans trait (including inherited from parent)
             $usesScanPrevention = in_array(
                 \App\DynamoDb\PreventsDynamoDbScans::class,
-                $reflection->getTraitNames()
+                array_keys(class_uses_recursive($className))
             );
 
             $this->dynamoDbModels[$className] = [
@@ -207,7 +217,7 @@ class AuditDynamoDbScans extends Command
         }
     }
 
-    protected function auditPath(string $path): void
+    protected function auditPath(string $path, bool $showProgress = true): void
     {
         if (!File::isDirectory($path)) {
             if (File::isFile($path)) {
@@ -218,16 +228,22 @@ class AuditDynamoDbScans extends Command
 
         $files = File::allFiles($path);
 
-        $this->output->progressStart(count($files));
+        if ($showProgress) {
+            $this->output->progressStart(count($files));
+        }
 
         foreach ($files as $file) {
             if ($file->getExtension() === 'php') {
                 $this->auditFile($file->getPathname());
             }
-            $this->output->progressAdvance();
+            if ($showProgress) {
+                $this->output->progressAdvance();
+            }
         }
 
-        $this->output->progressFinish();
+        if ($showProgress) {
+            $this->output->progressFinish();
+        }
     }
 
     protected function auditFile(string $filePath): void
@@ -265,14 +281,6 @@ class AuditDynamoDbScans extends Command
             return;
         }
 
-        // Check for safe patterns first (might be a false positive)
-        foreach ($this->safePatterns as $safePattern) {
-            if (preg_match($safePattern, $line)) {
-                // Line has a safe pattern, but still check for risky combinations
-                break;
-            }
-        }
-
         // Check for scan patterns
         foreach ($this->scanPatterns as $name => $config) {
             if (preg_match($config['pattern'], $line, $matches)) {
@@ -294,8 +302,8 @@ class AuditDynamoDbScans extends Command
                 }
 
                 if ($isDbModel || $this->lineReferencesModel($line, $usesModels)) {
-                    // Check if there's a where clause before this method
-                    if (!$this->hasKeyConditionBefore($line)) {
+                    // Check if there's a safe pattern (where clause, find, withIndex) on this line
+                    if (!$this->hasSafePattern($line)) {
                         $this->issues[] = [
                             'file' => $file,
                             'line' => $lineNumber,
@@ -322,12 +330,21 @@ class AuditDynamoDbScans extends Command
         return false;
     }
 
-    protected function hasKeyConditionBefore(string $line): bool
+    protected function hasSafePattern(string $line): bool
     {
-        // Simple heuristic: check if there's a ->where or ->withIndex before the terminal method
-        return preg_match('/->where\s*\(.*\).*->(get|first|all|count|chunk|each|pluck)\s*\(/', $line) ||
-               preg_match('/->withIndex\s*\(/', $line) ||
-               preg_match('/->find\s*\(/', $line);
+        // Check if line contains patterns that indicate a Query (not Scan) operation
+        foreach ($this->safePatterns as $safePattern) {
+            if (preg_match($safePattern, $line)) {
+                return true;
+            }
+        }
+
+        // Also check for chained where before terminal methods
+        if (preg_match('/->where\s*\(.*\).*->(get|first|all|count|chunk|each|pluck)\s*\(/', $line)) {
+            return true;
+        }
+
+        return false;
     }
 
     protected function outputTable(): void
@@ -407,7 +424,7 @@ class AuditDynamoDbScans extends Command
             ],
         ];
 
-        $this->line(json_encode($output, JSON_PRETTY_PRINT));
+        $this->line(json_encode($output, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
     }
 
     protected function getClassNameFromFile(string $filePath): ?string

@@ -44,8 +44,8 @@ abstract class BaseDynamoDbModel extends DynamoDbModel
                 $model->{$model->getKeyName()} = (string) Str::uuid();
             }
 
-            // Auto-set created_at if not present and the model has it in fillable
-            if (in_array('created_at', $model->getFillable()) && empty($model->created_at)) {
+            // Auto-set created_at if not present and the model allows it
+            if ($model->isFillable('created_at') && empty($model->created_at)) {
                 $model->created_at = now()->toIso8601String();
             }
         });
