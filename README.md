@@ -134,6 +134,187 @@ Use these endpoints to:
 
 **Warning**: These endpoints intentionally trigger errors and should only be used in development/testing environments.
 
+## Testing
+
+This starter kit includes a comprehensive test suite with PHPUnit, covering unit tests, feature tests, and API tests.
+
+### Running Tests
+
+```bash
+# Run all tests via Laravel's artisan command
+composer test
+
+# Run all tests via PHPUnit directly (suppresses OpenTelemetry warnings)
+composer test:phpunit
+
+# Run only unit tests
+composer test:unit
+
+# Run only feature tests
+composer test:feature
+```
+
+### Test Coverage Reports
+
+To generate code coverage reports, you need either **Xdebug** or **PCOV** PHP extension installed.
+
+```bash
+# Generate coverage with PCOV (recommended - faster)
+composer test:coverage:pcov
+
+# Generate coverage with Xdebug
+composer test:coverage
+
+# View HTML report in browser
+open coverage/html/index.html
+```
+
+Coverage reports are generated in the `coverage/` directory:
+- `coverage/html/index.html` - HTML report (open in browser for detailed view)
+- `coverage/clover.xml` - Clover XML format (for CI/CD integration)
+
+#### Installing PCOV (macOS with Homebrew PHP)
+
+PCOV is faster than Xdebug for code coverage. To install on macOS:
+
+```bash
+# Install pcre2 dependency
+brew install pcre2
+
+# Build and install PCOV
+cd /tmp && rm -rf pcov-build && mkdir pcov-build && cd pcov-build
+curl -L https://pecl.php.net/get/pcov-1.0.12.tgz | tar xz
+cd pcov-1.0.12
+phpize
+./configure CFLAGS="-I$(brew --prefix pcre2)/include"
+make
+
+# Copy to PHP extension directory
+PHP_EXT_DIR=$(php -r "echo ini_get('extension_dir');")
+mkdir -p "$PHP_EXT_DIR"
+cp modules/pcov.so "$PHP_EXT_DIR/"
+
+# Enable the extension
+PHP_INI_DIR=$(php -r "echo PHP_CONFIG_FILE_SCAN_DIR;")
+echo "extension=pcov.so" > "$PHP_INI_DIR/ext-pcov.ini"
+
+# Verify installation
+php -m | grep pcov
+```
+
+#### Installing Xdebug (Alternative)
+
+```bash
+pecl install xdebug
+
+# Add to php.ini
+echo "zend_extension=xdebug.so" >> $(php -r "echo php_ini_loaded_file();")
+echo "xdebug.mode=coverage" >> $(php -r "echo php_ini_loaded_file();")
+```
+
+### Test Structure
+
+```
+tests/
+├── TestCase.php                           # Base test class
+├── Unit/
+│   └── Models/
+│       └── ExampleModelDynamoDBTest.php   # DynamoDB model tests
+└── Feature/
+    ├── HomePageTest.php                   # Home page tests
+    ├── Api/
+    │   └── HealthCheckTest.php            # API health endpoint tests
+    ├── Http/
+    │   └── Controllers/
+    │       └── DebugControllerTest.php    # Debug endpoints tests
+    └── Console/
+        └── Commands/
+            ├── DynamoDbMigrateTest.php        # Migration command tests
+            ├── MakeDynamoDbMigrationTest.php  # Migration generator tests
+            └── MakeDynamoDbModelTest.php      # Model generator tests
+```
+
+### Test Categories
+
+| Category | Description | Command |
+|----------|-------------|---------|
+| Unit Tests | Test individual classes in isolation | `composer test:unit` |
+| Feature Tests | Test HTTP endpoints and full request lifecycle | `composer test:feature` |
+| API Tests | Test API endpoints (under Feature/Api) | `composer test:feature` |
+| Command Tests | Test Artisan commands (under Feature/Console) | `composer test:feature` |
+
+### Running Tests in Docker
+
+```bash
+# Run tests inside the app container
+docker compose exec app composer test
+
+# Run with coverage (requires Xdebug in Dockerfile.dev)
+docker compose exec app composer test:coverage
+```
+
+### Writing New Tests
+
+**Unit Test Example:**
+```php
+namespace Tests\Unit;
+
+use Tests\TestCase;
+use App\Models\YourModel;
+
+class YourModelTest extends TestCase
+{
+    public function test_model_has_correct_fillable(): void
+    {
+        $model = new YourModel();
+        $this->assertEquals(['field1', 'field2'], $model->getFillable());
+    }
+}
+```
+
+**Feature Test Example:**
+```php
+namespace Tests\Feature;
+
+use Tests\TestCase;
+
+class YourEndpointTest extends TestCase
+{
+    public function test_endpoint_returns_success(): void
+    {
+        $response = $this->getJson('/api/v1/your-endpoint');
+
+        $response->assertStatus(200)
+            ->assertJsonStructure(['data', 'message']);
+    }
+}
+```
+
+### CI/CD Integration
+
+The test suite is configured for easy CI/CD integration:
+
+```yaml
+# Example GitHub Actions step
+- name: Run Tests
+  run: composer test:phpunit
+
+# With coverage (requires Xdebug/PCOV)
+- name: Run Tests with Coverage
+  run: composer test:coverage
+
+- name: Upload Coverage
+  uses: codecov/codecov-action@v3
+  with:
+    files: coverage/clover.xml
+```
+
+### Notes
+
+- **OpenTelemetry Warning**: When running tests locally without the OpenTelemetry PHP extension, you may see a warning. This is expected and doesn't affect test execution.
+- **Database**: Tests use SQLite in-memory database by default (configured in `phpunit.xml`).
+- **Environment**: Tests run with `APP_ENV=testing` and various services disabled (Telescope, Pulse, etc.).
+
 ## Working with DynamoDB
 
 This starter kit includes AWS DynamoDB Local for development, along with the necessary tools to create models and run migrations.
