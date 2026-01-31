@@ -39,7 +39,10 @@ jobs:
           restore-keys: ${{ runner.os }}-composer-
 
       - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader --ignore-platform-req=ext-opentelemetry
+        run: |
+          # Remove composer.lock to regenerate from Packagist (lock file may have old private repo references)
+          rm -f composer.lock
+          composer update --no-interaction --prefer-dist --optimize-autoloader --ignore-platform-req=ext-opentelemetry
 
       - name: Copy environment file
         run: cp .env.example .env
