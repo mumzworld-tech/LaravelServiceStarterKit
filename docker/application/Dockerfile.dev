@@ -53,26 +53,11 @@ COPY docker/application/opcache-dev.ini /usr/local/etc/php/conf.d/opcache-dev.in
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 RUN chmod +x /usr/bin/composer
 
-# Copy composer files and .env file to extract GitHub token
-COPY composer.json composer.lock .env ./
-
-# GitHub token for private repository access
-ARG GITHUB_TOKEN
+# Copy composer files
+COPY composer.json composer.lock ./
 
 # Install composer dependencies (including dev dependencies)
-RUN GITHUB_TOKEN_FROM_ENV=$(grep '^GITHUB_TOKEN=' .env 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "") && \
-    FINAL_TOKEN="${GITHUB_TOKEN:-$GITHUB_TOKEN_FROM_ENV}" && \
-    if [ -n "$FINAL_TOKEN" ]; then \
-        composer config github-oauth.github.com $FINAL_TOKEN; \
-        composer install --prefer-dist --no-scripts --no-progress --no-autoloader; \
-    else \
-        echo "GitHub token not found - mumzworld/laravel-opentelemetry will be skipped"; \
-        cp composer.json composer.json.backup; \
-        sed -i '/"mumzworld\/laravel-opentelemetry"/d' composer.json; \
-        composer install --prefer-dist --no-scripts --no-progress --no-autoloader; \
-        mv composer.json.backup composer.json; \
-    fi && \
-    composer clear-cache
+RUN composer install --prefer-dist --no-scripts --no-progress --no-autoloader
 
 # Copy application code
 COPY . .
