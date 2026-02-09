@@ -23,7 +23,7 @@ The package is already included in `composer.json`:
 }
 ```
 
-**GitHub Token Requirement**: The package is hosted in a private repository and requires a GitHub token for access.
+> **Note**: The package is publicly available and requires no GitHub authentication.
 
 ## 🔧 Configuration
 
@@ -38,9 +38,6 @@ OTEL_TRACES_EXPORTER=otlp
 OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
 OTEL_PROPAGATORS=baggage,tracecontext
 OTEL_PHP_AUTOLOAD_ENABLED=true
-
-# GitHub token for private repository access
-GITHUB_TOKEN=your_github_token_here
 ```
 
 ### Environment-Specific Configuration
@@ -65,28 +62,6 @@ The following PHP extensions are automatically installed in Docker containers:
 # Install OpenTelemetry extension via PECL
 RUN pecl install redis opentelemetry && docker-php-ext-enable redis opentelemetry
 ```
-
-### GitHub Token Handling
-
-The Docker build process includes **automatic GitHub token handling with fallback**:
-
-```dockerfile
-# GitHub token extraction with fallback mechanism
-RUN GITHUB_TOKEN_FROM_ENV=$(grep '^GITHUB_TOKEN=' .env 2>/dev/null | cut -d'=' -f2 | tr -d '"' || echo "") && \
-    FINAL_TOKEN="${GITHUB_TOKEN:-$GITHUB_TOKEN_FROM_ENV}" && \
-    if [ -n "$FINAL_TOKEN" ]; then \
-        composer config github-oauth.github.com $FINAL_TOKEN; \
-        composer install --prefer-dist --no-scripts --no-progress --no-autoloader; \
-    else \
-        echo "GitHub token not found - mumzworld/laravel-opentelemetry will be skipped"; \
-        cp composer.json composer.json.backup; \
-        sed -i '/"mumzworld\/laravel-opentelemetry"/d' composer.json; \
-        composer install --prefer-dist --no-scripts --no-progress --no-autoloader; \
-        mv composer.json.backup composer.json; \
-    fi
-```
-
-**Fallback Behavior**: If no GitHub token is provided, the build continues without the OpenTelemetry package (graceful degradation).
 
 ### Starting Services
 
@@ -229,18 +204,7 @@ Check collector logs:
 docker-compose logs otel-collector
 ```
 
-**2. GitHub Token Issues**
-
-If you see "mumzworld/laravel-opentelemetry will be skipped":
-```bash
-# Check if token is set
-grep GITHUB_TOKEN .env
-
-# Rebuild with token
-docker-compose build --no-cache app horizon
-```
-
-**3. Grafana Datasource Errors**
+**2. Grafana Datasource Errors**
 
 Restart Grafana to reload configuration:
 ```bash

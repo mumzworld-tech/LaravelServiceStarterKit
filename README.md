@@ -44,10 +44,6 @@ Once the containers are running, you can access the following admin interfaces:
     ```bash
     cp .env.example .env
     ```
-    **Important**: Add your GitHub token to access private repositories:
-    ```env
-    GITHUB_TOKEN=your_github_token_here
-    ```
     The OpenTelemetry configuration is pre-configured but can be customized:
     ```env
     OTEL_SERVICE_NAME=laravel-starter-kit-service
@@ -517,10 +513,9 @@ This starter kit includes comprehensive OpenTelemetry integration using the `mum
 
 ### Quick Start
 
-1. **Ensure GitHub token is set** in your `.env` file (required for private package access)
-2. **Start services** with `docker compose up --build -d`
-3. **Access Grafana** at http://localhost:3001 (admin/admin)
-4. **Test tracing** with built-in endpoints:
+1. **Start services** with `docker compose up --build -d`
+2. **Access Grafana** at http://localhost:3001 (admin/admin)
+3. **Test tracing** with built-in endpoints:
 
 ```bash
 # Test OpenTelemetry functionality
@@ -560,15 +555,7 @@ class UserService
 2. **Navigate**: Explore → Tempo
 3. **Query traces**: `{service.name="laravel-starter-kit-service"}`
 
-### GitHub Token Requirement
-
-The `mumzworld/laravel-opentelemetry` package is hosted in a private repository. **You must provide a GitHub token** in your `.env` file:
-
-```env
-GITHUB_TOKEN=your_github_token_here
-```
-
-**Fallback Behavior**: If no token is provided, Docker build will continue without the OpenTelemetry package (graceful degradation).
+> **Note**: The `mumzworld/laravel-opentelemetry` package is now public and requires no authentication.
 
 ### Detailed Setup
 
