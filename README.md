@@ -515,8 +515,7 @@ This starter kit includes comprehensive OpenTelemetry integration using the `mum
 
 1. **Start services** with `docker compose up --build -d`
 2. **Access Grafana** at http://localhost:3001 (admin/admin)
-3. **Access Grafana** at http://localhost:3001 (admin/admin)
-4. **Test tracing** with built-in endpoints:
+3. **Test tracing** with built-in endpoints:
 
 ```bash
 # Test OpenTelemetry functionality
