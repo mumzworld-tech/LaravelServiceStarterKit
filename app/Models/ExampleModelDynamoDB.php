@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\DynamoDb\PreventsDynamoDbScans;
 use BaoPham\DynamoDb\DynamoDbModel;
 use Illuminate\Support\Str;
 
 class ExampleModelDynamoDB extends DynamoDbModel
 {
+    use PreventsDynamoDbScans;
     /**
      * The DynamoDB table associated with the model.
      *

@@ -1,0 +1,195 @@
+<?php
+
+namespace App\DynamoDb;
+
+use BaoPham\DynamoDb\DynamoDbQueryBuilder;
+use BaoPham\DynamoDb\RawDynamoDbQuery;
+use Illuminate\Support\Facades\Log;
+use RuntimeException;
+
+class ScanGuardedQueryBuilder extends DynamoDbQueryBuilder
+{
+    /**
+     * Whether to fail on scan operations.
+     */
+    protected bool $failOnScan = false;
+
+    /**
+     * Whether to log scan operations.
+     */
+    protected bool $logScans = true;
+
+    /**
+     * Whether scan was explicitly allowed (for audit logging).
+     */
+    protected bool $scanAllowed = false;
+
+    /**
+     * Context for logging/error messages.
+     */
+    protected string $scanContext = '';
+
+    /**
+     * Enable failing on scan operations.
+     */
+    public function failOnScan(bool $enable = true): static
+    {
+        $this->failOnScan = $enable;
+        return $this;
+    }
+
+    /**
+     * Disable scan logging.
+     */
+    public function withoutScanLogging(): static
+    {
+        $this->logScans = false;
+        return $this;
+    }
+
+    /**
+     * Set context for scan detection (useful for debugging).
+     */
+    public function withScanContext(string $context): static
+    {
+        $this->scanContext = $context;
+        return $this;
+    }
+
+    /**
+     * Allow scan for this specific query (explicit opt-in).
+     * Still logs the scan at info level for audit purposes.
+     */
+    public function allowScan(): static
+    {
+        $this->failOnScan = false;
+        $this->scanAllowed = true;
+        return $this;
+    }
+
+    /**
+     * Override toDynamoDbQuery to intercept and check for scans.
+     */
+    public function toDynamoDbQuery($columns = [], $limit = DynamoDbQueryBuilder::MAX_LIMIT): RawDynamoDbQuery
+    {
+        $raw = parent::toDynamoDbQuery($columns, $limit);
+
+        if ($raw->op === 'Scan') {
+            $this->handleScanDetected($raw);
+        }
+
+        return $raw;
+    }
+
+    /**
+     * Handle detected scan operation.
+     */
+    protected function handleScanDetected(RawDynamoDbQuery $raw): void
+    {
+        $table = $this->getModel()->getTable();
+        $modelClass = get_class($this->getModel());
+
+        $data = [
+            'operation' => $raw->op,
+            'table' => $table,
+            'model' => $modelClass,
+            'context' => $this->scanContext,
+            'wheres' => $this->wheres,
+            'has_limit' => isset($this->limit),
+            'limit' => $this->limit ?? 'unlimited',
+            'allowed' => $this->scanAllowed,
+            'trace' => $this->getRelevantStackTrace(),
+        ];
+
+        if ($this->logScans) {
+            if ($this->scanAllowed) {
+                // Log at info level for explicitly allowed scans (audit trail)
+                Log::info('DynamoDB SCAN operation allowed', $data);
+            } else {
+                // Log at warning level for unexpected scans
+                Log::warning('DynamoDB SCAN operation detected', $data);
+            }
+        }
+
+        if ($this->shouldFailOnScan()) {
+            $message = $this->buildScanErrorMessage($table, $modelClass);
+            throw new RuntimeException($message);
+        }
+    }
+
+    /**
+     * Determine if we should fail on scan.
+     */
+    protected function shouldFailOnScan(): bool
+    {
+        // Check query-level setting first
+        if ($this->failOnScan) {
+            return true;
+        }
+
+        // Check global config
+        return config('dynamodb.fail_on_scan', false);
+    }
+
+    /**
+     * Build a helpful error message for scan detection.
+     */
+    protected function buildScanErrorMessage(string $table, string $modelClass): string
+    {
+        $message = "DynamoDB Scan operation detected on table '{$table}' (model: {$modelClass}).";
+
+        if ($this->scanContext) {
+            $message .= " Context: {$this->scanContext}.";
+        }
+
+        $message .= "\n\nPossible solutions:";
+        $message .= "\n1. Add a where clause on the primary key (hash key)";
+        $message .= "\n2. Use a Global Secondary Index (GSI) with ->withIndex('index-name')";
+        $message .= "\n3. If scan is intentional, use ->allowScan() to bypass this check";
+
+        $indexKeys = $this->getModel()->getDynamoDbIndexKeys();
+        if (!empty($indexKeys)) {
+            $message .= "\n\nAvailable indexes: " . implode(', ', array_keys($indexKeys));
+        }
+
+        return $message;
+    }
+
+    /**
+     * Get relevant stack trace for debugging.
+     */
+    protected function getRelevantStackTrace(): array
+    {
+        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 15);
+
+        return array_values(array_filter($trace, function ($frame) {
+            $file = $frame['file'] ?? '';
+
+            // Skip vendor files
+            if (str_contains($file, '/vendor/')) {
+                return false;
+            }
+
+            // Skip this class
+            if (str_contains($file, 'ScanGuardedQueryBuilder.php')) {
+                return false;
+            }
+
+            return true;
+        }));
+    }
+
+    /**
+     * Get a new instance of the query builder.
+     */
+    public function newQuery(): static
+    {
+        $query = new static($this->getModel());
+        $query->failOnScan = $this->failOnScan;
+        $query->logScans = $this->logScans;
+        $query->scanAllowed = $this->scanAllowed;
+        $query->scanContext = $this->scanContext;
+
+        return $query;
+    }
+}

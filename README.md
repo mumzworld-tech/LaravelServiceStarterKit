@@ -500,6 +500,112 @@ php artisan migrate:dynamodb --fresh
 
 For more details on working with DynamoDB in Laravel, refer to the [baopham/laravel-dynamodb](https://github.com/baopham/laravel-dynamodb) documentation.
 
+### DynamoDB Scan Prevention
+
+DynamoDB Scan operations are expensive and can cause performance issues and high costs. This starter kit includes built-in tools to detect and prevent accidental scan operations during development.
+
+#### Enabling Scan Prevention
+
+**Option 1: Use the trait in your models**
+
+```php
+use App\DynamoDb\PreventsDynamoDbScans;
+
+class YourModel extends DynamoDbModel
+{
+    use PreventsDynamoDbScans;
+
+    // Optional: fail immediately on scan (default: false)
+    protected bool $failOnScan = true;
+
+    // Optional: log scan operations (default: true)
+    protected bool $logScans = true;
+}
+```
+
+**Option 2: Extend the base model**
+
+```php
+use App\DynamoDb\BaseDynamoDbModel;
+
+class YourModel extends BaseDynamoDbModel
+{
+    // Scan prevention is built-in
+}
+```
+
+#### Configuration
+
+Add these to your `.env` file:
+
+```env
+# Throw exceptions on scan operations (recommended: true for local/testing)
+DYNAMODB_FAIL_ON_SCAN=true
+
+# Log all scan operations for monitoring
+DYNAMODB_LOG_SCANS=true
+```
+
+#### Query-Level Control
+
+```php
+// Fail on scan for this specific query
+User::query()->failOnScan()->where('status', 'active')->get();
+
+// Explicitly allow scan (for rare cases like data exports)
+User::query()->allowScan()->get();
+
+// Add context for debugging scan warnings
+User::query()->withScanContext('admin dashboard export')->get();
+```
+
+#### Auditing for Scan Operations
+
+Run the audit command to find potential scan operations in your codebase:
+
+```bash
+# Basic audit
+php artisan dynamodb:audit-scans
+
+# Show fix suggestions
+php artisan dynamodb:audit-scans --fix
+
+# Audit specific path
+php artisan dynamodb:audit-scans --path=app/Services
+
+# JSON output for CI/CD integration
+php artisan dynamodb:audit-scans --json
+
+# Exit with error code if issues found (useful for CI)
+php artisan dynamodb:audit-scans --strict
+```
+
+The audit command detects patterns that typically result in scans:
+- `Model::all()` - Full table scan
+- `Model::get()` without where clause
+- `Model::first()` without key conditions
+- `->count()` without key conditions
+- `->chunk()` and `->each()` iterations without filters
+
+#### What Triggers a Scan vs Query
+
+| Operation | Result | Recommendation |
+|-----------|--------|----------------|
+| `Model::find($id)` | GetItem | Safe - uses primary key |
+| `Model::where('primary_key', $value)->get()` | Query | Safe - uses key condition |
+| `Model::where('gsi_hash', $value)->get()` | Query | Safe - uses GSI |
+| `Model::where('non_indexed_attr', $value)->get()` | **Scan** | Add GSI or restructure |
+| `Model::all()` | **Scan** | Avoid - use pagination with key conditions |
+| `Model::get()` | **Scan** | Add where clause on indexed attribute |
+
+#### Best Practices
+
+1. **Always query by primary key or GSI** - Structure your data access patterns around your indexes
+2. **Define GSIs for common query patterns** - Add indexes for attributes you frequently filter by
+3. **Use `->withIndex('index-name')` explicitly** - Be explicit about which index to use
+4. **Enable `DYNAMODB_FAIL_ON_SCAN=true` locally** - Catch scan operations during development
+5. **Run `dynamodb:audit-scans` in CI** - Prevent scan-causing code from being merged
+
 ## OpenTelemetry & Distributed Tracing
 
 This starter kit includes comprehensive OpenTelemetry integration using the `mumzworld/laravel-opentelemetry` package for distributed tracing and observability.
